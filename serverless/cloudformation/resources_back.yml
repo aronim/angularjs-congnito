@@ -1,0 +1,327 @@
+
+# Default User Role for Lambdas
+DefaultRole:
+  Type: AWS::IAM::Role
+  Properties:
+    Path: /
+    AssumeRolePolicyDocument:
+      Version: 2012-10-17
+      Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action: sts:AssumeRole
+    Policies:
+      - PolicyName: ${self:service}-${self:provider.stage}-DefaultPolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: arn:aws:logs:${self:provider.region}:*:log-group:/aws/lambda/*:*:*
+
+# Cognito User Pool
+UserPool:
+  Type: AWS::Cognito::UserPool
+  Properties:
+    UserPoolName: ${self:service}${self:provider.stage}
+    LambdaConfig:
+      CustomMessage: { "Fn::GetAtt": [ CustomMessageLambdaFunction, Arn ] }
+      PreSignUp: { "Fn::GetAtt": [ PreSignUpLambdaFunction, Arn ] }
+    Policies:
+      PasswordPolicy:
+        MinimumLength: "8"
+        RequireUppercase: "true"
+        RequireLowercase: "true"
+        RequireNumbers: "true"
+        RequireSymbols: "true"
+    AutoVerifiedAttributes:
+    - email
+    AliasAttributes:
+    - email
+    EmailConfiguration: {}
+    EmailVerificationMessage: Your verification code is {####}.
+    EmailVerificationSubject: Your verification code
+    MfaConfiguration: "OFF"
+    DeviceConfiguration:
+      ChallengeRequiredOnNewDevice: "false"
+      DeviceOnlyRememberedOnUserPrompt: "false"
+    Schema:
+    - Name: name
+      AttributeDataType: String
+      Mutable: true
+      Required: true
+    - Name: email
+      AttributeDataType: String
+      Mutable: false
+      Required: true
+
+# Creates a User Pool Client to be used by the identity pool
+UserPoolClient:
+  Type: AWS::Cognito::UserPoolClient
+  Properties:
+    UserPoolId: { Ref: UserPool }
+    ClientName: ${self:service}${self:provider.stage}
+    GenerateSecret: "false"
+    RefreshTokenValidity: 30
+    ExplicitAuthFlows: []
+    ReadAttributes:
+    - name
+    - email
+    WriteAttributes:
+    - name
+    - email
+
+# Creates a federeated Identity pool
+IdentityPool:
+  Type: AWS::Cognito::IdentityPool
+  Properties:
+    IdentityPoolName: ${self:service}${self:provider.stage}
+    AllowUnauthenticatedIdentities: "false"
+    CognitoIdentityProviders:
+    - ClientId: { Ref: UserPoolClient }
+      ProviderName: { "Fn::GetAtt": ["UserPool", "ProviderName" ] }
+
+# Create a role for unauthorized acces to AWS resources. Very limited access.
+# Only allows users in the previously created Identity Pool
+UnauthorizedRole:
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Version: 2012-10-17
+      Statement:
+      - Effect: Allow
+        Principal:
+          Federated: cognito-identity.amazonaws.com
+        Action:
+        - sts:AssumeRoleWithWebIdentity
+        Condition:
+          StringEquals:
+            cognito-identity.amazonaws.com:aud: { Ref: IdentityPool }
+          ForAnyValue:StringLike:
+            cognito-identity.amazonaws.com:amr: unauthenticated
+    Policies:
+    - PolicyName: CognitoUnauthorizedPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Action:
+          - mobileanalytics:PutEvents
+          - cognito-sync:*
+          Resource: "*"
+
+# Create a role for authorized acces to AWS resources. Control what your user can access.
+# Only allows users in the previously created Identity Pool
+AuthorizedRole:
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Version: 2012-10-17
+      Statement:
+      - Effect: Allow
+        Principal:
+          Federated: cognito-identity.amazonaws.com
+        Action:
+        - sts:AssumeRoleWithWebIdentity
+        Condition:
+          StringEquals:
+            cognito-identity.amazonaws.com:aud: { Ref: IdentityPool }
+          ForAnyValue:StringLike:
+            cognito-identity.amazonaws.com:amr: authenticated
+    Policies:
+    - PolicyName: CognitoAuthorizedPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Action:
+          - mobileanalytics:PutEvents
+          - cognito-sync:*
+          - cognito-identity:*
+          Resource: "*"
+        - Effect: Allow
+          Action:
+          - lambda:InvokeFunction
+          Resource: "*"
+
+# Assigns the roles to the Identity Pool
+IdentityPoolRoleMapping:
+  Type: AWS::Cognito::IdentityPoolRoleAttachment
+  Properties:
+    IdentityPoolId:
+      Ref: IdentityPool
+    Roles:
+      authenticated: { "Fn::GetAtt": [ AuthorizedRole, Arn ] }
+      unauthenticated: { "Fn::GetAtt": [ UnauthorizedRole, Arn ] }
+
+# Administrative User for testing purposes
+AdminUser:
+  Type: AWS::IAM::User
+  Properties:
+    UserName: ${self:service}-AdminUser
+
+# Managed Policy for Admin User
+AdminUserPolicy:
+  Type: AWS::IAM::ManagedPolicy
+  Properties:
+    PolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+      - Effect: Allow
+        Action:
+        - cognito-idp:AdminConfirmSignUp
+        - cognito-idp:AdminDeleteUser
+        - cognito-idp:AdminGetUser
+        Resource: { "Fn::GetAtt": [ UserPool, Arn ] }
+      - Effect: Allow
+        Action:
+        - sqs:DeleteMessage
+        - sqs:PurgeQueue
+        - sqs:ReceiveMessage
+        Resource: "arn:aws:sqs:*:*:AngularJsCognito-EmailReceived"
+    Users:
+    - { Ref: AdminUser }
+
+# Access Keys for Admin User
+AdminUserKeys:
+  Type: AWS::IAM::AccessKey
+  Properties:
+    UserName: { Ref: AdminUser }
+
+# Root S3 Bucket
+RootBucket:
+  Type: AWS::S3::Bucket
+  Properties:
+    BucketName: ${self:vars.rootDomainName}
+    AccessControl: PublicRead
+    WebsiteConfiguration:
+      IndexDocument: index.html
+      ErrorDocument: 404.html
+
+# WWW S3 Bucket
+WWWBucket:
+  Type: AWS::S3::Bucket
+  Properties:
+    BucketName: { "Fn::Join": [ "", [ "www.", ${self:vars.rootDomainName} ] ] }
+    AccessControl: BucketOwnerFullControl
+    WebsiteConfiguration:
+      RedirectAllRequestsTo:
+        HostName: { Ref: RootBucket }
+
+#myDNS:
+#  Type: AWS::Route53::RecordSetGroup
+#  Properties:
+#    HostedZoneName: { "Fn::Join": [ "", [ "www.", ${self:vars.rootDomainName}, "." ] ] }
+#    RecordSets:
+#    - Name:
+#        Ref: RootDomainName
+#      Type: A
+#      AliasTarget:
+#        HostedZoneId: { "Fn::FindInMap": [ RegionMap, { Ref: AWS::Region }, S3hostedzoneID ] }
+#        DNSName: { "Fn::FindInMap": [ RegionMap, { Ref: AWS::Region }, websiteendpoint ] }
+#    - Name: { "Fn::Join": [ "", [ "www.", ${self:vars.rootDomainName} ] ] }
+#      Type: CNAME
+#      TTL: '900'
+#      ResourceRecords:
+#      - { "Fn::GetAtt": [ WWWBucket, DomainName] }
+
+# Root SSL Certificate
+RootSSLCertificate:
+  Type: AWS::CertificateManager::Certificate
+  Properties:
+    DomainName: {self:vars.rootDomainName}
+    DomainValidationOptions:
+    - DomainName: {self:vars.rootDomainName}
+      ValidationDomain: {self:vars.rootDomainName}
+
+# Wildcard SSL Certificate
+WildcardSSLCertificate:
+  Type: AWS::CertificateManager::Certificate
+  Properties:
+    DomainName: { "Fn::Join": [ "", [ "www.", ${self:vars.rootDomainName} ] ] }
+    DomainValidationOptions:
+    - DomainName: { "Fn::Join": [ "", [ "www.", ${self:vars.rootDomainName} ] ] }
+      ValidationDomain: {self:vars.rootDomainName}
+
+# Website CloudFront Distribution
+WebsiteCloudFrontDistribution:
+  Type: AWS::CloudFront::Distribution
+  Properties:
+    DistributionConfig:
+      Aliases:
+      - {self:vars.rootDomainName}
+      Enabled: true
+      DefaultRootObject: index.html
+      PriceClass: PriceClass_100
+      CustomErrorResponses:
+      - ErrorCachingMinTTL: 300
+        ErrorCode: 403
+        ResponseCode: 200
+        ResponsePagePath: /index.html
+      - ErrorCachingMinTTL: 300
+        ErrorCode: 404
+        ResponseCode: 200
+        ResponsePagePath: /index.html
+      DefaultCacheBehavior:
+        TargetOriginId: {self:vars.rootDomainName}
+        ViewerProtocolPolicy: redirect-to-https
+        MinTTL: 0
+        AllowedMethods:
+        - HEAD
+        - GET
+        CachedMethods:
+        - HEAD
+        - GET
+        ForwardedValues:
+          QueryString: false
+          Cookies:
+            Forward: none
+      Origins:
+      - DomainName: {self:vars.rootDomainName}.s3.amazonaws.com
+        Id: {self:vars.rootDomainName}
+        S3OriginConfig: {}
+      Restrictions:
+        GeoRestriction:
+          RestrictionType: none
+          Locations: []
+      ViewerCertificate:
+        AcmCertificateArn: { Ref: SSLCertificate }
+        SslSupportMethod: sni-only
+        MinimumProtocolVersion: TLSv1.1_2016
+
+# Route53 RecordSetGroup
+Route53RecordSetGroup:
+  Type: AWS::Route53::RecordSetGroup
+  Properties:
+    HostedZoneName: aronim.com.
+    RecordSets:
+    - Name: angular-cognito.aronim.com.
+      Type: CNAME
+      AliasTarget:
+        HostedZoneId: { Ref: WebsiteCloudFrontDistribution }
+        DNSName: { "Fn::GetAtt": [ WebsiteCloudFrontDistribution, DomainName ] }
+
+# Api Gateway Authorizer
+ApiGatewayAuthorizer:
+  Type: AWS::ApiGateway::Authorizer
+  Properties:
+    AuthorizerResultTtlInSeconds: 300
+    IdentitySource: method.request.header.Authorization
+    Name: ${self:service}-${self:provider.stage}
+    RestApiId: { Ref: ApiGatewayRestApi }
+    Type: COGNITO_USER_POOLS
+    ProviderARNs:
+    - { "Fn::GetAtt": [ UserPool, Arn ]}
+
+# Updating Authorizer for API Gateway Method - Hello GET
+ApiGatewayMethodHelloGet:
+  Type: AWS::ApiGateway::Method
+  Properties:
+    AuthorizationType: COGNITO_USER_POOLS
+    AuthorizerId: { Ref: ApiGatewayAuthorizer }
+  DependsOn: ApiGatewayAuthorizer

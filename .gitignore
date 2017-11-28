@@ -1,0 +1,16 @@
+
+# enviroment files
+src/js/environment/Environment.js
+src/js/environment/EnvironmentTest.js
+
+# vendor js
+vendor
+
+# package directories
+node_modules
+
+# Serverless directories
+.serverless
+
+# IntelliJ Project
+.idea

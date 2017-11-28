@@ -1,0 +1,59 @@
+service: AngularCognito
+
+provider:
+  name: aws
+  stage: Dev
+  runtime: nodejs6.10
+  role: DefaultRole
+  region: us-east-1
+  profile: aronim
+
+plugins:
+  - serverless-stack-output
+
+custom:
+  output:
+    handler: scripts/GenerateEnvironment.handle
+  hostedZoneName: aronim.com
+  rootDomainName: dev.aronim.com
+
+functions:
+  Hello:
+    handler: scripts/Hello.handle
+    memory: 128
+    events:
+      - http:
+          path: hello
+          method: get
+          cors: true
+          authorizer:
+            # This is just a place holder... Overriding ARN in cloudformation/resources.yml
+            arn: arn:aws:cognito-idp:us-east-1:xxx:userpool/1-AngularJsCognito
+  UserExists:
+    role: UserExistsRole
+    handler: scripts/UserExists.handle
+    memory: 128
+    events:
+      - http:
+          path: /users/exists
+          method: get
+          cors: true
+  CustomMessage:
+    handler: scripts/CustomMessage.handle
+    memory: 128
+    events:
+      - cognitoUserPool:
+          pool: UserPool
+          trigger: CustomMessage
+  PreSignUp:
+    handler: scripts/PreSignUp.handle
+    memory: 128
+    events:
+      - cognitoUserPool:
+          pool: UserPool
+          trigger: PreSignUp
+
+# https://gist.github.com/singledigit/2c4d7232fa96d9e98a3de89cf6ebe7a5
+resources:
+  Resources: ${file(./cloudformation/resources.yml)}
+  Outputs: ${file(./cloudformation/outputs.yml)}

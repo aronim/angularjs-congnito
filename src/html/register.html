@@ -1,0 +1,110 @@
+<md-content layout="row"
+            layout-align="space-around"
+            layout-padding="layout-padding"
+            ng-cloak="ng-cloak">
+
+    <md-card flex="flex"
+             flex-gt-sm="50"
+             flex-gt-md="33">
+
+        <md-toolbar>
+            <div class="md-toolbar-tools">
+                <h2>Register</h2>
+            </div>
+        </md-toolbar>
+
+        <form name="registerForm">
+
+            <md-input-container class="md-block">
+                <input name="name"
+                       type="text"
+                       placeholder="Name"
+                       required=""
+                       ng-model="vm.command.name"/>
+
+                <div role="alert"
+                     ng-messages="registerForm.name.$error">
+
+                    <div ng-message="required">Please enter your name.</div>
+                </div>
+            </md-input-container>
+
+            <md-input-container class="md-block">
+                <input name="username"
+                       type="text"
+                       placeholder="Username"
+                       ng-model="vm.command.username"
+                       ng-model-options="{updateOn: 'blur'}"
+                       required=""
+                       username-does-not-exist-validator=""/>
+
+                <div role="alert"
+                     ng-messages="registerForm.username.$error">
+
+                    <div ng-message="required">Please enter a username.</div>
+                    <div ng-message="usernameDoesNotExist">Username is not available.</div>
+                </div>
+            </md-input-container>
+
+            <md-input-container class="md-block">
+                <input name="email"
+                       type="email"
+                       placeholder="Email"
+                       ng-model="vm.command.email"
+                       ng-model-options="{updateOn: 'blur'}"
+                       required=""
+                       email-does-not-exist-validator=""/>
+
+                <div role="alert"
+                     ng-messages="registerForm.email.$error">
+
+                    <div ng-message="required">Please enter your email.</div>
+                    <div ng-message="emailDoesNotExist">User with email already exists.</div>
+                </div>
+            </md-input-container>
+
+            <md-input-container class="md-block">
+                <input name="password"
+                       type="password"
+                       placeholder="Password"
+                       required=""
+                       ng-model="vm.command.password"
+                       md-maxlength="16"/>
+
+                <div role="alert"
+                     ng-messages="registerForm.password.$error">
+
+                    <div ng-message="required">Please enter your password.</div>
+                    <div ng-message="md-maxlength">Too long.</div>
+                </div>
+            </md-input-container>
+
+            <!--<md-input-container class="md-block">-->
+                <!--<input name="confirmPassword"-->
+                       <!--type="password"-->
+                       <!--placeholder="Confirm Password"-->
+                       <!--required=""-->
+                       <!--ng-pattern="{{vm.confirmPasswordPattern}}"-->
+                       <!--ng-model="vm.command.confirmPassword"-->
+                       <!--md-maxlength="16"/>-->
+
+                <!--<div role="alert"-->
+                     <!--ng-messages="registerForm.confirmPassword.$error">-->
+
+                    <!--<div ng-message="required">Please confirm your password.</div>-->
+                    <!--<div ng-message="pattern">Passwords do not match.</div>-->
+                <!--</div>-->
+            <!--</md-input-container>-->
+
+            <md-button class="md-raised md-primary"
+                       ng-disabled="!registerForm.$valid"
+                       ng-click="vm.registerUser()">&nbsp Register &nbsp
+            </md-button>
+
+            <md-button class="md-raised"
+                       ui-sref="login">&nbsp Login &nbsp
+            </md-button>
+        </form>
+
+    </md-card>
+</md-content>

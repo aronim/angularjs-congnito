@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <base href="/">
+
+    <title>Angular Material - Starter App</title>
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:400,700">
+    <link rel="stylesheet" href="vendor/angular-material/angular-material.min.css"/>
+    <link rel="stylesheet" href="css/app.css"/>
+</head>
+<body ng-app="AngularJsCognito.Application">
+
+<ui-view></ui-view>
+
+<script type="text/javascript" src="lib/aws-cognito-sdk.js"></script>
+<script type="text/javascript" src="lib/amazon-cognito-identity.js"></script>
+<script type="text/javascript" src="vendor/angular/angular.js"></script>
+<script type="text/javascript" src="vendor/angular-animate/angular-animate.js"></script>
+<script type="text/javascript" src="vendor/angular-aria/angular-aria.js"></script>
+<script type="text/javascript" src="vendor/angular-local-storage/dist/angular-local-storage.js"></script>
+<script type="text/javascript" src="vendor/angular-material/angular-material.js"></script>
+<script type="text/javascript" src="vendor/angular-messages/angular-messages.js"></script>
+<script type="text/javascript" src="vendor/angular-ui-router/release/angular-ui-router.js"></script>
+<script type="text/javascript" src="vendor/async/dist/async.js"></script>
+<script type="text/babel" src="js/environment/Environment.js"></script>
+<script type="text/babel" src="js/user/UserService.js"></script>
+<script type="text/babel" src="js/dashboard/DashboardController.js"></script>
+<script type="text/babel" src="js/login/LoginController.js"></script>
+<script type="text/babel" src="js/logout/LogoutController.js"></script>
+<script type="text/babel" src="js/register/RegisterController.js"></script>
+<script type="text/babel" src="js/password/ResetPasswordController.js"></script>
+<script type="text/babel" src="js/password/ResetPasswordConfirmationController.js"></script>
+<script type="text/babel" src="js/user/EmailExistsValidatorDirective.js"></script>
+<script type="text/babel" src="js/user/EmailDoesNotExistValidatorDirective.js"></script>
+<script type="text/babel" src="js/user/UsernameExistsValidatorDirective.js"></script>
+<script type="text/babel" src="js/user/UsernameDoesNotExistValidatorDirective.js"></script>
+<script type="text/babel" src="js/Application.js"></script>
+</body>
+</html>

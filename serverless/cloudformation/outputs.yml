@@ -1,0 +1,40 @@
+
+# Identity Pool Id
+IdentityPoolId:
+  Value: { "Ref": "IdentityPool" }
+
+# User Pool Client Id
+UserPoolClientId:
+  Value: { "Ref": "UserPoolClient" }
+
+# User Pool Id
+UserPoolId:
+  Value: { "Ref": "CognitoUserPoolUserPool" }
+
+# User Pool Provider Name
+UserPoolProviderName:
+  Value: { "Fn::GetAtt": ["CognitoUserPoolUserPool", "ProviderName" ] }
+
+# Admin Access Key
+AdminAccessKey:
+  Value: { "Ref": "AdminUserKeys" }
+
+# Admin Secret Key
+AdminSecretKey:
+  Value: { "Fn::GetAtt": ["AdminUserKeys", "SecretAccessKey" ] }
+
+# AWS Region
+AWSRegion:
+  Value: { "Ref" : "AWS::Region" }
+
+# AWS Account Id
+AWSAccountId:
+  Value: { "Ref" : "AWS::AccountId" }
+
+# Website Cloud Front Distribution ID
+WebsiteCloudFrontDistributionId:
+  Value: { "Ref": "WebsiteCloudFrontDistribution" }
+
+# Website Cloud Front Distribution Domain Name
+WebsiteCloudFrontDistributionDomainName:
+  Value: { "Fn::GetAtt": [ "WebsiteCloudFrontDistribution", "DomainName" ] }
